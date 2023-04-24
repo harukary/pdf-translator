@@ -15,9 +15,13 @@ from pdf2image import convert_from_bytes, convert_from_path
 from PIL import Image, ImageDraw, ImageFont
 from pydantic import BaseModel, Field
 from tqdm import tqdm
-from transformers import MarianMTModel, MarianTokenizer
+# from transformers import MarianMTModel, MarianTokenizer
 from utils import fw_fill
 
+from utils.openai_util import translate
+import os
+os.environ['HTTP_PROXY'] = "http://proxy.mei.co.jp:8080"
+os.environ['HTTPS_PROXY'] = "http://proxy.mei.co.jp:8080"
 
 class InputPdf(BaseModel):
     """Input PDF file."""
@@ -69,7 +73,8 @@ class TranslateApi:
 
     def run(self):
         """Run the API server"""
-        uvicorn.run(self.app, host="0.0.0.0", port=8765)
+        # uvicorn.run(self.app, host="0.0.0.0", port=8765)
+        uvicorn.run(self.app, host="localhost", port=8765)
 
     async def translate_pdf(self, input_pdf: UploadFile = File(...)) -> FileResponse:
         """API endpoint for translating PDF files.
@@ -84,7 +89,9 @@ class TranslateApi:
         FileResponse
             Translated PDF file
         """
+        # print('?')
         input_pdf_data = await input_pdf.read()
+        # print('??:',type(input_pdf_data))
         self._translate_pdf(input_pdf_data, self.temp_dir_name)
 
         return FileResponse(
@@ -120,9 +127,9 @@ class TranslateApi:
             Path to the output directory
         """
         if isinstance(pdf_path_or_bytes, Path):
-            pdf_images = convert_from_path(pdf_path_or_bytes, dpi=self.DPI)
+            pdf_images = convert_from_path(pdf_path_or_bytes, dpi=self.DPI, poppler_path = r"C:\poppler-23.01.0\Library\bin")
         else:
-            pdf_images = convert_from_bytes(pdf_path_or_bytes, dpi=self.DPI)
+            pdf_images = convert_from_bytes(pdf_path_or_bytes, dpi=self.DPI, poppler_path = r"C:\poppler-23.01.0\Library\bin")
 
         pdf_files = []
         reached_references = False
@@ -159,17 +166,17 @@ class TranslateApi:
         Load the layout model, OCR model, translation model and font.
         """
         self.font = ImageFont.truetype(
-            "/home/SourceHanSerif-Light.otf",
+            "assets/SourceHanSerif-Light.otf",
             size=self.FONT_SIZE,
         )
 
         self.layout_model = PPStructure(table=False, ocr=False, lang="en")
         self.ocr_model = PaddleOCR(ocr=True, lang="en", ocr_version="PP-OCRv3")
 
-        self.translate_model = MarianMTModel.from_pretrained("staka/fugumt-en-ja").to(
-            "cuda"
-        )
-        self.translate_tokenizer = MarianTokenizer.from_pretrained("staka/fugumt-en-ja")
+        # self.translate_model = MarianMTModel.from_pretrained("staka/fugumt-en-ja").to(
+        #     "cuda"
+        # )
+        # self.translate_tokenizer = MarianTokenizer.from_pretrained("staka/fugumt-en-ja")
 
     def __translate_one_page(
         self,
@@ -280,20 +287,24 @@ class TranslateApi:
         texts = self.__split_text(text, 448)
 
         translated_texts = []
+        # for i, t in enumerate(texts):
+        #     inputs = self.translate_tokenizer(t, return_tensors="pt").input_ids.to(
+        #         "cuda"
+        #     )
+        #     outputs = self.translate_model.generate(inputs, max_length=512)
+        #     res = self.translate_tokenizer.decode(outputs[0], skip_special_tokens=True)
+        #     # skip weird translations
+        #     if res.startswith("「この版"):
+        #         continue
+        #     translated_texts.append(res)
+        # print(translated_texts)
+        # return "".join(translated_texts)
         for i, t in enumerate(texts):
-            inputs = self.translate_tokenizer(t, return_tensors="pt").input_ids.to(
-                "cuda"
-            )
-            outputs = self.translate_model.generate(inputs, max_length=512)
-            res = self.translate_tokenizer.decode(outputs[0], skip_special_tokens=True)
-
-            # skip weird translations
-            if res.startswith("「この版"):
-                continue
-
+            # TODO: check token num and split
+            res = translate(t,debug=True)
             translated_texts.append(res)
-        print(translated_texts)
         return "".join(translated_texts)
+
 
     def __split_text(self, text: str, text_limit: int = 448) -> List[str]:
         """Split text into chunks of sentences within text_limit.
