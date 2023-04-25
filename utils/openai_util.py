@@ -43,5 +43,5 @@ def translate(text,debug=False):
         {'role': 'system', 'content': "あなたの役割は論文を翻訳することです。これから論文の一部を送信するので、翻訳を行ってください。"},
         {'role': 'user', 'content': text},
     ]
-    res = chat_complete(messages,max_tokens=4000, temperature=0., debug=debug)
+    res = chat_complete(messages,max_tokens=2048, temperature=0., debug=debug)
     return(res)

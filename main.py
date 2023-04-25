@@ -19,9 +19,16 @@ from tqdm import tqdm
 from utils import fw_fill
 
 from utils.openai_util import translate
-import os
+import os, tiktoken
 os.environ['HTTP_PROXY'] = "http://proxy.mei.co.jp:8080"
 os.environ['HTTPS_PROXY'] = "http://proxy.mei.co.jp:8080"
+import nltk
+nltk.download('punkt')
+from nltk.tokenize import sent_tokenize
+max_tokens = 1536
+enc = tiktoken.encoding_for_model("gpt-3.5-turbo-0301")
+def tik(text):
+    return len(enc.encode(text))
 
 class InputPdf(BaseModel):
     """Input PDF file."""
@@ -284,7 +291,9 @@ class TranslateApi:
         str
             Translated text.
         """
+        print(text)
         texts = self.__split_text(text, 448)
+        print(texts)
 
         translated_texts = []
         # for i, t in enumerate(texts):
@@ -300,11 +309,26 @@ class TranslateApi:
         # print(translated_texts)
         # return "".join(translated_texts)
         for i, t in enumerate(texts):
-            # TODO: check token num and split
             res = translate(t,debug=True)
             translated_texts.append(res)
-        return "".join(translated_texts)
+        #     sentences = sent_tokenize(t)
+        #     chunks = []
+        #     chunk = ""
+        #     for sentence in sentences:
+        #         print(sentence, tik(chunk), tik(sentence))
+        #         if (tik(chunk)+tik(sentence)) <= max_tokens:
+        #         # if len(chunk.split()) + len(sentence.split()) <= max_tokens:
+        #             chunk += " " + sentence
+        #         else:
+        #             chunks.append(chunk.strip())
+        #             chunk = sentence
+        #     if chunk:
+        #         chunks.append(chunk.strip())
+        # for c in chunks:
+        #     res = translate(c,debug=True)
+        #     translated_texts.append(res)
 
+        return "".join(translated_texts)
 
     def __split_text(self, text: str, text_limit: int = 448) -> List[str]:
         """Split text into chunks of sentences within text_limit.
