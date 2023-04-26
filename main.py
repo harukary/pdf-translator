@@ -20,8 +20,6 @@ from utils import fw_fill
 
 from utils.openai_util import translate
 import os, tiktoken
-os.environ['HTTP_PROXY'] = "http://proxy.mei.co.jp:8080"
-os.environ['HTTPS_PROXY'] = "http://proxy.mei.co.jp:8080"
 import nltk
 nltk.download('punkt')
 from nltk.tokenize import sent_tokenize
@@ -134,9 +132,9 @@ class TranslateApi:
             Path to the output directory
         """
         if isinstance(pdf_path_or_bytes, Path):
-            pdf_images = convert_from_path(pdf_path_or_bytes, dpi=self.DPI, poppler_path = r"C:\poppler-23.01.0\Library\bin")
+            pdf_images = convert_from_path(pdf_path_or_bytes, dpi=self.DPI)#, poppler_path = r"C:\poppler-23.01.0\Library\bin")
         else:
-            pdf_images = convert_from_bytes(pdf_path_or_bytes, dpi=self.DPI, poppler_path = r"C:\poppler-23.01.0\Library\bin")
+            pdf_images = convert_from_bytes(pdf_path_or_bytes, dpi=self.DPI)#, poppler_path = r"C:\poppler-23.01.0\Library\bin")
 
         pdf_files = []
         reached_references = False
@@ -291,9 +289,9 @@ class TranslateApi:
         str
             Translated text.
         """
-        print(text)
-        texts = self.__split_text(text, 448)
-        print(texts)
+        # print(text)
+        # texts = self.__split_text(text, 448)
+        # print(texts)
 
         translated_texts = []
         # for i, t in enumerate(texts):
@@ -308,25 +306,25 @@ class TranslateApi:
         #     translated_texts.append(res)
         # print(translated_texts)
         # return "".join(translated_texts)
-        for i, t in enumerate(texts):
-            res = translate(t,debug=True)
-            translated_texts.append(res)
-        #     sentences = sent_tokenize(t)
-        #     chunks = []
-        #     chunk = ""
-        #     for sentence in sentences:
-        #         print(sentence, tik(chunk), tik(sentence))
-        #         if (tik(chunk)+tik(sentence)) <= max_tokens:
-        #         # if len(chunk.split()) + len(sentence.split()) <= max_tokens:
-        #             chunk += " " + sentence
-        #         else:
-        #             chunks.append(chunk.strip())
-        #             chunk = sentence
-        #     if chunk:
-        #         chunks.append(chunk.strip())
-        # for c in chunks:
-        #     res = translate(c,debug=True)
+        # for i, t in enumerate(texts):
+        #     res = translate(t,debug=True)
         #     translated_texts.append(res)
+        sentences = sent_tokenize(text)
+        chunks = []
+        chunk = ""
+        for sentence in sentences:
+            print(sentence, tik(chunk), tik(sentence))
+            if (tik(chunk)+tik(sentence)) <= max_tokens:
+            # if len(chunk.split()) + len(sentence.split()) <= max_tokens:
+                chunk += " " + sentence
+            else:
+                chunks.append(chunk.strip())
+                chunk = sentence
+        if chunk:
+            chunks.append(chunk.strip())
+        for c in chunks:
+            res = translate(c,debug=True)
+            translated_texts.append(res)
 
         return "".join(translated_texts)
 
